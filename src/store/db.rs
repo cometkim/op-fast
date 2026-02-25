@@ -155,7 +155,7 @@ impl Db {
     }
 
     fn db_path() -> Result<PathBuf> {
-        if let Ok(path) = std::env::var("OP_OFFLINE_STORE_DIR") {
+        if let Ok(path) = std::env::var("OP_FAST_STORE_DIR") {
             return Ok(PathBuf::from(path));
         }
 

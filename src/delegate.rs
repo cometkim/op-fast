@@ -13,7 +13,7 @@ pub struct OpDelegate {
 }
 
 impl OpDelegate {
-    const ENV_VAR_NAME: &'static str = "OP_OFFLINE_COMMAND";
+    const ENV_VAR_NAME: &'static str = "OP_FAST_COMMAND";
 
     pub fn new() -> Result<Self> {
         if let Ok(var) = env::var(Self::ENV_VAR_NAME) {

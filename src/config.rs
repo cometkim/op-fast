@@ -46,9 +46,9 @@ impl Config {
 
         let mut config = Self::from_raw(raw)?;
 
-        if let Ok(env_ttl) = env::var("OP_OFFLINE_DEFAULT_TTL") {
+        if let Ok(env_ttl) = env::var("OP_FAST_DEFAULT_TTL") {
             config.default_ttl =
-                humantime::parse_duration(&env_ttl).context("Invalid OP_OFFLINE_DEFAULT_TTL")?;
+                humantime::parse_duration(&env_ttl).context("Invalid OP_FAST_DEFAULT_TTL")?;
         }
 
         Ok(config)
@@ -85,7 +85,7 @@ impl Config {
     }
 
     fn config_path() -> Result<PathBuf> {
-        if let Ok(path) = env::var("OP_OFFLINE_CONFIG") {
+        if let Ok(path) = env::var("OP_FAST_CONFIG") {
             return Ok(PathBuf::from(path));
         }
 
