@@ -1967,6 +1967,7 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
+ "subst",
  "thiserror 2.0.18",
  "toml",
  "url",
@@ -2750,6 +2751,16 @@ dependencies = [
  "quote",
  "rustversion",
  "syn",
+]
+
+[[package]]
+name = "subst"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a9a86e5144f63c2d18334698269a8bfae6eece345c70b64821ea5b35054ec99"
+dependencies = [
+ "memchr",
+ "unicode-width",
 ]
 
 [[package]]

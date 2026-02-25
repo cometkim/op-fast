@@ -10,18 +10,6 @@ lazy_static::lazy_static! {
     static ref ENCLOSED_REF: Regex = Regex::new(
         r"\{\{\s*(op://[^\}]+)\s*\}\}"
     ).unwrap();
-
-    static ref UNENCLOSED_VAR: Regex = Regex::new(
-        r"\$([A-Za-z_][A-Za-z0-9_]*)"
-    ).unwrap();
-
-    static ref VAR_WITH_DEFAULT: Regex = Regex::new(
-        r"\$\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*:-(.*?)\}"
-    ).unwrap();
-
-    static ref ENCLOSED_VAR: Regex = Regex::new(
-        r"\$\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}"
-    ).unwrap();
 }
 
 pub fn extract_references(input: &str) -> HashSet<String> {
@@ -43,23 +31,7 @@ pub fn extract_references(input: &str) -> HashSet<String> {
 }
 
 pub fn resolve_variables(input: &str) -> String {
-    let input = VAR_WITH_DEFAULT.replace_all(input, |caps: &fancy_regex::Captures| {
-        let var_name = caps.get(1).unwrap().as_str();
-        let default = caps.get(2).unwrap().as_str();
-        std::env::var(var_name).unwrap_or_else(|_| default.to_string())
-    });
-
-    let input = ENCLOSED_VAR.replace_all(&input, |caps: &fancy_regex::Captures| {
-        let var_name = caps.get(1).unwrap().as_str().trim();
-        std::env::var(var_name).unwrap_or_else(|_| format!("${{{}}}", var_name))
-    });
-
-    UNENCLOSED_VAR
-        .replace_all(&input, |caps: &fancy_regex::Captures| {
-            let var_name = caps.get(1).unwrap().as_str();
-            std::env::var(var_name).unwrap_or_else(|_| format!("${}", var_name))
-        })
-        .into_owned()
+    subst::substitute(input, &subst::Env).unwrap_or_else(|_| input.to_string())
 }
 
 pub fn substitute_references<F>(input: &str, resolver: F) -> String
