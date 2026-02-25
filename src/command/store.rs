@@ -1,47 +1,47 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-use crate::cache::Cache;
+use crate::store::Store;
 
 #[derive(Debug, Parser)]
-pub struct CacheCommand {
+pub struct StoreCommand {
     #[clap(subcommand)]
-    pub command: CacheSubcommand,
+    pub command: StoreSubcommand,
 }
 
 #[derive(Debug, Subcommand)]
-pub enum CacheSubcommand {
+pub enum StoreSubcommand {
     List,
     Clear { reference: Option<String> },
 }
 
-pub fn execute(cmd: CacheCommand) -> Result<()> {
-    let cache = Cache::open()?;
+pub fn execute(cmd: StoreCommand) -> Result<()> {
+    let store = Store::open()?;
 
     match cmd.command {
-        CacheSubcommand::List => {
-            let entries = cache.list()?;
+        StoreSubcommand::List => {
+            let entries = store.list()?;
             if entries.is_empty() {
-                println!("Cache is empty");
+                println!("Store is empty");
                 return Ok(());
             }
 
-            println!("{:<60} {:<20} STATUS", "REFERENCE", "CACHED_AT");
+            println!("{:<60} {:<20} STATUS", "REFERENCE", "STORED_AT");
             println!("{}", "-".repeat(90));
 
-            for (reference, entry) in entries {
-                let status = if entry.is_expired() {
+            for (reference, meta) in entries {
+                let status = if meta.is_expired() {
                     "expired"
                 } else {
                     "valid"
                 };
-                let cached_at = chrono_conversion(entry.cached_at);
-                println!("{:<60} {:<20} {}", reference, cached_at, status);
+                let stored_at = chrono_conversion(meta.stored_at);
+                println!("{:<60} {:<20} {}", reference, stored_at, status);
             }
         }
-        CacheSubcommand::Clear { reference } => match reference {
+        StoreSubcommand::Clear { reference } => match reference {
             Some(ref_str) => {
-                let deleted = cache.delete(&ref_str)?;
+                let deleted = store.delete(&ref_str)?;
                 if deleted {
                     println!("Deleted: {}", ref_str);
                 } else {
@@ -49,8 +49,8 @@ pub fn execute(cmd: CacheCommand) -> Result<()> {
                 }
             }
             None => {
-                cache.clear()?;
-                println!("Cache cleared");
+                store.clear()?;
+                println!("Store cleared");
             }
         },
     }

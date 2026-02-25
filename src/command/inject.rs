@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::{Parser, ValueHint};
 
-use crate::cache::Cache;
 use crate::delegate::OpDelegate;
+use crate::store::Store;
 use crate::template;
 
 #[derive(Debug, Parser)]
@@ -38,18 +38,18 @@ pub fn execute(args: InjectArgs) -> Result<()> {
         return Ok(());
     }
 
-    let cache = Cache::open();
+    let store = Store::open();
     let delegate = OpDelegate::new()?;
 
-    let mut cached_values = std::collections::HashMap::new();
+    let mut stored_values = std::collections::HashMap::new();
     let mut uncached_refs = Vec::new();
 
-    match &cache {
-        Ok(cache) => {
+    match &store {
+        Ok(store) => {
             for ref_str in &references {
-                match cache.get(ref_str)? {
+                match store.get(ref_str)? {
                     Some(value) => {
-                        cached_values.insert(ref_str.clone(), value);
+                        stored_values.insert(ref_str.clone(), value);
                     }
                     None => {
                         uncached_refs.push(ref_str.as_str());
@@ -58,7 +58,7 @@ pub fn execute(args: InjectArgs) -> Result<()> {
             }
         }
         Err(e) => {
-            log::error!("Cache unavailable: {}", e);
+            log::error!("Store unavailable: {}", e);
             uncached_refs = references.iter().map(|s| s.as_str()).collect();
         }
     }
@@ -67,17 +67,17 @@ pub fn execute(args: InjectArgs) -> Result<()> {
         log::debug!("Fetching {} uncached references", uncached_refs.len());
         let fetched = delegate.read_batch(&uncached_refs)?;
 
-        if let Ok(cache) = &cache {
+        if let Ok(store) = &store {
             for (ref_str, value) in &fetched {
-                cache.put(ref_str, value)?;
+                store.put(ref_str, value)?;
             }
         }
 
-        cached_values.extend(fetched);
+        stored_values.extend(fetched);
     }
 
     let output =
-        template::substitute_references(&resolved, |ref_str| cached_values.get(ref_str).cloned());
+        template::substitute_references(&resolved, |ref_str| stored_values.get(ref_str).cloned());
 
     print!("{}", output);
     Ok(())

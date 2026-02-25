@@ -3,17 +3,17 @@ use std::ffi::OsString;
 use anyhow::Result;
 use clap::Parser;
 
-pub mod cache;
 pub mod inject;
 pub mod read;
 pub mod run;
+pub mod store;
 
 #[derive(Debug, Parser)]
 pub enum Subcommand {
     Read(read::ReadArgs),
     Inject(inject::InjectArgs),
     Run(run::RunArgs),
-    Cache(cache::CacheCommand),
+    Store(store::StoreCommand),
 
     #[clap(external_subcommand)]
     Other(Vec<OsString>),
@@ -24,7 +24,7 @@ pub fn execute(subcommand: Subcommand) -> Result<()> {
         Subcommand::Read(args) => read::execute(args),
         Subcommand::Inject(args) => inject::execute(args),
         Subcommand::Run(args) => run::execute(args),
-        Subcommand::Cache(cmd) => cache::execute(cmd),
+        Subcommand::Store(cmd) => store::execute(cmd),
         Subcommand::Other(args) => delegate_passthrough(&args),
     }
 }

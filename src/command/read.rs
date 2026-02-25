@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::{Parser, ValueHint};
 
-use crate::cache::Cache;
 use crate::delegate::OpDelegate;
+use crate::store::Store;
 
 #[derive(Debug, Parser)]
 pub struct ReadArgs {
@@ -31,20 +31,20 @@ pub struct ReadArgs {
 }
 
 pub fn execute(args: ReadArgs) -> Result<()> {
-    let cache = Cache::open();
+    let store = Store::open();
     let delegate = OpDelegate::new()?;
 
-    let value = match cache {
-        Ok(cache) => match cache.get(&args.reference)? {
+    let value = match store {
+        Ok(store) => match store.get(&args.reference)? {
             Some(value) => value,
             None => {
                 let value = delegate.read(&args.reference)?;
-                cache.put(&args.reference, &value)?;
+                store.put(&args.reference, &value)?;
                 value
             }
         },
         Err(e) => {
-            log::error!("Cache unavailable, delegating to op: {}", e);
+            log::error!("Store unavailable, delegating to op: {}", e);
             delegate.read(&args.reference)?
         }
     };
