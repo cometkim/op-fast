@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use globset::Glob;
 use serde::Deserialize;
 
-const DEFAULT_TTL: Duration = Duration::from_secs(3600);
+const DEFAULT_TTL: Duration = Duration::from_secs(86400);
 
 #[derive(Debug, Clone)]
 pub struct Config {
