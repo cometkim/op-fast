@@ -15,20 +15,70 @@ fn parse_file_mode(s: &str) -> Result<u32> {
 }
 
 #[derive(Debug, Parser)]
+#[clap(
+    about = "Inject secrets into a config file",
+    long_about = "Inject secrets into a file templated with secret references.
+
+You can pass in a config file templated with secret references and receive a
+config file with the actual secrets substituted. Secrets are cached in the
+OS keyring for offline access.
+
+Supports two syntaxes:
+  - {{ op://vault/item/field }}  (enclosed)
+  - op://vault/item/field        (unenclosed)
+
+Variables are resolved using shell environment:
+  - $VAR
+  - ${VAR}
+  - ${VAR:-default}
+
+Learn more about loading secrets into config files:
+https://developer.1password.com/docs/cli/secrets-config-files",
+    after_help = "Examples:
+  Inject from stdin:
+    echo 'password: {{ op://app-prod/db/password }}' | op-offline inject
+
+  Inject from file to file:
+    op-offline inject -i config.yml.tpl -o config.yml
+
+  Use environment variables in references:
+    echo 'db: op://$ENV/db/password' | ENV=prod op-offline inject
+"
+)]
 pub struct InjectArgs {
-    #[clap(value_hint = ValueHint::FilePath)]
+    #[clap(
+        value_hint = ValueHint::FilePath,
+        help = "Input template file (reads from stdin if not specified)"
+    )]
     pub file: Option<PathBuf>,
 
-    #[clap(short = 'i', long = "in-file", value_name = "FILE", value_hint = ValueHint::FilePath)]
+    #[clap(
+        short = 'i',
+        long = "in-file",
+        value_name = "FILE",
+        value_hint = ValueHint::FilePath,
+        help = "Input template file (alias for positional argument)"
+    )]
     pub in_file: Option<PathBuf>,
 
-    #[clap(short = 'o', long = "out-file", value_name = "FILE", value_hint = ValueHint::FilePath)]
+    #[clap(
+        short = 'o',
+        long = "out-file",
+        value_name = "FILE",
+        value_hint = ValueHint::FilePath,
+        help = "Write output to a file instead of stdout"
+    )]
     pub out_file: Option<PathBuf>,
 
-    #[clap(long = "file-mode", value_name = "filemode", value_parser = parse_file_mode)]
+    #[clap(
+        long = "file-mode",
+        value_name = "filemode",
+        value_parser = parse_file_mode,
+        help = "Set file mode for the output file (octal, ignored without --out-file)"
+    )]
     pub file_mode: Option<u32>,
 
-    #[clap(short = 'f', long = "force")]
+    #[clap(short = 'f', long = "force", help = "Do not prompt for confirmation")]
     pub force: bool,
 }
 

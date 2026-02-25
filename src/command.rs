@@ -10,9 +10,16 @@ pub mod store;
 
 #[derive(Debug, Parser)]
 pub enum Subcommand {
+    #[clap(hide = true)]
     Read(read::ReadArgs),
+
+    #[clap(hide = true)]
     Inject(inject::InjectArgs),
+
+    #[clap(hide = true)]
     Run(run::RunArgs),
+
+    #[clap(hide = true)]
     Store(store::StoreCommand),
 
     #[clap(external_subcommand)]

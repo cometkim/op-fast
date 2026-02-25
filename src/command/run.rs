@@ -13,14 +13,60 @@ use crate::template;
 const MASK: &str = "<concealed by 1Password>";
 
 #[derive(Debug, Parser)]
+#[clap(
+    about = "Pass secrets as environment variables to a process",
+    long_about = "Pass secrets as environment variables to an application or script.
+
+Scans environment variables for secret references, loads the corresponding
+secrets from 1Password, then runs the provided command with the secrets
+made available as environment variables.
+
+Precedence order (highest to lowest):
+  1. Environment files (--env-file)
+  2. Shell environment variables
+
+Secrets printed to stdout and stderr are concealed by default.
+Use --no-masking to disable masking.",
+    after_help = "Examples:
+  Run with environment variable:
+    DB_PASSWORD='op://app-prod/db/password' op-offline run -- printenv DB_PASSWORD
+
+  Use an environment file:
+    echo 'DB_PASSWORD=op://app-dev/db/password' > .env
+    op-offline run --env-file .env -- printenv DB_PASSWORD
+
+  Use variables to switch environments:
+    cat .env
+    DB_PASSWORD=op://$APP_ENV/db/password
+
+    APP_ENV=prod op-offline run --env-file .env -- printenv DB_PASSWORD
+
+  Show secrets without masking:
+    DB_PASSWORD='op://app-prod/db/password' op-offline run --no-masking -- printenv DB_PASSWORD
+
+  Run a subshell to expand variables:
+    MY_VAR='op://vault/item/field' op-offline run --no-masking -- sh -c 'echo \"$MY_VAR\"'
+"
+)]
 pub struct RunArgs {
-    #[clap(long = "env-file", value_name = "FILE")]
+    #[clap(
+        long = "env-file",
+        value_name = "FILE",
+        help = "Environment file to load (can be specified multiple times)"
+    )]
     pub env_files: Vec<PathBuf>,
 
-    #[clap(long = "no-masking")]
+    #[clap(
+        long = "no-masking",
+        help = "Disable masking of secrets on stdout and stderr"
+    )]
     pub no_masking: bool,
 
-    #[clap(trailing_var_arg = true, allow_hyphen_values = true)]
+    #[clap(
+        trailing_var_arg = true,
+        allow_hyphen_values = true,
+        help = "Command to run (use -- to separate flags)"
+    )]
     pub command: Vec<String>,
 }
 

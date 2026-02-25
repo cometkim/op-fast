@@ -4,6 +4,23 @@ use clap::{Parser, Subcommand};
 use crate::store::Store;
 
 #[derive(Debug, Parser)]
+#[clap(
+    about = "Manage op-offline store",
+    long_about = "Manage op-offline store and OS keyring.
+
+Secrets are automatically cached when read from 1Password and expire
+based on the configured TTL (time-to-live).",
+    after_help = "Examples:
+  List all cached secrets:
+    op-offline store list
+
+  Clear a specific secret:
+    op-offline store clear 'op://vault/item/field'
+
+  Clear all cached secrets:
+    op-offline store clear
+"
+)]
 pub struct StoreCommand {
     #[clap(subcommand)]
     pub command: StoreSubcommand,
@@ -11,8 +28,14 @@ pub struct StoreCommand {
 
 #[derive(Debug, Subcommand)]
 pub enum StoreSubcommand {
+    #[clap(about = "List all cached secrets")]
     List,
-    Clear { reference: Option<String> },
+
+    #[clap(about = "Clear cached secrets")]
+    Clear {
+        #[clap(help = "Secret reference to clear (clears all if not specified)")]
+        reference: Option<String>,
+    },
 }
 
 pub fn execute(cmd: StoreCommand) -> Result<()> {
