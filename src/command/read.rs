@@ -1,25 +1,26 @@
+use std::fs::File;
+use std::io::Write;
 use std::path::PathBuf;
 
+use anyhow::{Context, Result};
 use clap::{Parser, ValueHint};
 
+use crate::cache::Cache;
+use crate::delegate::OpDelegate;
+
 #[derive(Debug, Parser)]
-pub(crate) struct ReadArgs {
-    /// Secret reference, e.g. op://app-prod/db/password
+pub struct ReadArgs {
     pub reference: String,
 
-    /// Set filemode for the output file. Ignored without --out-file flag
     #[clap(long = "file-mode", value_name = "filemode")]
     pub file_mode: Option<u32>,
 
-    /// Do not prompt for confirmation
     #[clap(short = 'f', long = "force")]
     pub force: bool,
 
-    /// Do not print a new line after the secret
     #[clap(short = 'n', long = "no-newline")]
     pub no_newline: bool,
 
-    /// Write the secret to a file instead of stdout
     #[clap(
         short = 'o',
         long = "out-file",
@@ -27,4 +28,36 @@ pub(crate) struct ReadArgs {
         value_hint = ValueHint::FilePath
     )]
     pub out_file: Option<PathBuf>,
+}
+
+pub fn execute(args: ReadArgs) -> Result<()> {
+    let cache = Cache::open();
+    let delegate = OpDelegate::new()?;
+
+    let value = match cache {
+        Ok(cache) => match cache.get(&args.reference)? {
+            Some(value) => value,
+            None => {
+                let value = delegate.read(&args.reference)?;
+                cache.put(&args.reference, &value)?;
+                value
+            }
+        },
+        Err(e) => {
+            log::error!("Cache unavailable, delegating to op: {}", e);
+            delegate.read(&args.reference)?
+        }
+    };
+
+    if let Some(out_file) = &args.out_file {
+        let mut file = File::create(out_file)
+            .with_context(|| format!("Failed to create file: {:?}", out_file))?;
+        file.write_all(value.as_bytes())?;
+    } else if args.no_newline {
+        print!("{}", value);
+    } else {
+        println!("{}", value);
+    }
+
+    Ok(())
 }
