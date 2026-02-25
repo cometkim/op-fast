@@ -36,13 +36,13 @@ Learn more about loading secrets into config files:
 https://developer.1password.com/docs/cli/secrets-config-files",
     after_help = "Examples:
   Inject from stdin:
-    echo 'password: {{ op://app-prod/db/password }}' | op-offline inject
+    echo 'password: {{ op://app-prod/db/password }}' | op-fast inject
 
   Inject from file to file:
-    op-offline inject -i config.yml.tpl -o config.yml
+    op-fast inject -i config.yml.tpl -o config.yml
 
   Use environment variables in references:
-    echo 'db: op://$ENV/db/password' | ENV=prod op-offline inject
+    echo 'db: op://$ENV/db/password' | ENV=prod op-fast inject
 "
 )]
 pub struct InjectArgs {

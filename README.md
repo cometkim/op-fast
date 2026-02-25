@@ -1,14 +1,14 @@
-# op-offline
+# op-fast: Speed up your 1Password CLI
 
-1Password CLI wrapper for instant access to secrets.
+`op-fast` is a proxy for the [1Password CLI], to make secret access much faster, like instantly ⚡
 
-Caches 1Password secret references in the OS keyring with configurable TTL. Provides instant access to previously fetched secrets without requiring re-authentication or network access.
+It leverages OS keyrings to cache secrets that have already been fetched. To make it fast re-access without requiring re-authentication or network roundtrips.
 
 ## Features
 
 - **Offline access**: Secrets cached in OS keyring (macOS Keychain, Linux keyutils)
 - **Configurable TTL**: Set default expiration or per-secret patterns
-- **Full CLI compatibility**: Drop-in replacement for `op read`, `op inject`, `op run`
+- **Full CLI compatibility**: Drop-in replacement for `op` command
 
 ## Installation
 
@@ -16,7 +16,7 @@ TBD
 
 ## Usage
 
-Basic usage is same with the original 1Password CLI. You can refer [offical docs](https://developer.1password.com/docs/cli)
+Basic usage is same with the original [1Password CLI].
 
 ### read
 
@@ -24,16 +24,16 @@ Read a secret reference:
 
 ```bash
 # Read a password
-op-offline read op://app-prod/db/password
+op-fast read op://app-prod/db/password
 
 # With variable substitution
-VAULT=prod op-offline read 'op://$VAULT/db/password'
+VAULT=prod op-fast read 'op://$VAULT/db/password'
 
 # Save to file (default mode: 600)
-op-offline read -o ./key.pem op://app-prod/ssh/private-key
+op-fast read -o ./key.pem op://app-prod/ssh/private-key
 
 # Custom file mode
-op-offline read -o ./key.pem --file-mode 644 op://app-prod/ssh/private-key
+op-fast read -o ./key.pem --file-mode 644 op://app-prod/ssh/private-key
 ```
 
 ### inject
@@ -42,16 +42,16 @@ Inject secrets into a config template:
 
 ```bash
 # From stdin
-echo 'password: {{ op://app-prod/db/password }}' | op-offline inject
+echo 'password: {{ op://app-prod/db/password }}' | op-fast inject
 
 # From file to file
-op-offline inject -i config.yml.tpl -o config.yml
+op-fast inject -i config.yml.tpl -o config.yml
 
 # With environment variables
-echo 'db: op://$ENV/db/password' | ENV=prod op-offline inject
+echo 'db: op://$ENV/db/password' | ENV=prod op-fast inject
 
 # Custom output file mode
-op-offline inject -i config.yml.tpl -o config.yml --file-mode 600
+op-fast inject -i config.yml.tpl -o config.yml --file-mode 600
 ```
 
 Supports two secret reference syntaxes:
@@ -64,36 +64,36 @@ Pass secrets as environment variables to a process:
 
 ```bash
 # With environment variable
-DB_PASSWORD='op://app-prod/db/password' op-offline run -- printenv DB_PASSWORD
+DB_PASSWORD='op://app-prod/db/password' op-fast run -- printenv DB_PASSWORD
 # Output: <concealed by 1Password>
 
 # With env file
 echo 'DB_PASSWORD=op://app-dev/db/password' > .env
-op-offline run --env-file .env -- printenv DB_PASSWORD
+op-fast run --env-file .env -- printenv DB_PASSWORD
 
 # Switch environments with variables
 cat .env
 # DB_PASSWORD=op://$APP_ENV/db/password
 
-APP_ENV=prod op-offline run --env-file .env -- printenv DB_PASSWORD
+APP_ENV=prod op-fast run --env-file .env -- printenv DB_PASSWORD
 
 # Show secrets without masking
-DB_PASSWORD='op://app-prod/db/password' op-offline run --no-masking -- printenv DB_PASSWORD
+DB_PASSWORD='op://app-prod/db/password' op-fast run --no-masking -- printenv DB_PASSWORD
 ```
 
 ### store
 
-Manage the `op-offline` store (OS keyring + cache metadata):
+Manage the `op-fast` store (OS keyring + cache metadata):
 
 ```bash
 # List all cached secrets
-op-offline store list
+op-fast store list
 
 # Clear a specific secret
-op-offline store clear 'op://vault/item/field'
+op-fast store clear 'op://vault/item/field'
 
 # Clear all cached secrets
-op-offline store clear
+op-fast store clear
 ```
 
 ### Passthrough
@@ -101,14 +101,20 @@ op-offline store clear
 Any unrecognized command is passed through to the real `op` binary:
 
 ```bash
-op-offline item list  # => op item list
-op-offline vault list # => op vault list
-op-offline whoami     # => op whoami
+op-fast item list  # => op item list
+op-fast vault list # => op vault list
+op-fast whoami     # => op whoami
+```
+
+You can even add an alias to your shell profile:
+
+```bash
+alias op=op-fast
 ```
 
 ## Configuration
 
-Configuration file: `~/.config/op-offline/config.toml`
+Configuration file: `~/.config/op-fast/config.toml`
 
 ```toml
 # Default TTL for cached secrets (default: 1day)
@@ -125,9 +131,9 @@ default_ttl = "1day"
 
 | Variable | Description |
 |----------|-------------|
-| `OP_OFFLINE_CONFIG` | Custom config file path |
-| `OP_OFFLINE_DEFAULT_TTL` | Override default TTL (e.g., `12h`, `1day`) |
-| `OP_OFFLINE_STORE_DIR` | Custom cache directory |
+| `OP_FAST_CONFIG` | Custom config file path |
+| `OP_FAST_STORE_DIR` | Custom cache directory |
+| `OP_FAST_DEFAULT_TTL` | Override default TTL (e.g., `12h`, `1day`) |
 
 ### TTL Format
 
@@ -140,7 +146,7 @@ Human-readable duration format:
 
 ## How It Works
 
-1. Cache layer: LMDB stores metadata (TTL, timestamps), OS keyring stores secret values
+1. Cache layer: LMDB stores cache metadata (TTL, timestamps), OS keyring stores secret values
 4. Batch fetching: Multiple uncached secrets fetched in a single `op inject` call
 2. Automatic GC: Expired entries cleaned up with 10% probability on each invocation
 
@@ -151,3 +157,5 @@ Secrets stored in OS-native keyring (encrypted at rest)
 ## License
 
 MIT
+
+[1Password CLI]: https://developer.1password.com/docs/cli

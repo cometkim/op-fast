@@ -29,23 +29,23 @@ Secrets printed to stdout and stderr are concealed by default.
 Use --no-masking to disable masking.",
     after_help = "Examples:
   Run with environment variable:
-    DB_PASSWORD='op://app-prod/db/password' op-offline run -- printenv DB_PASSWORD
+    DB_PASSWORD='op://app-prod/db/password' op-fast run -- printenv DB_PASSWORD
 
   Use an environment file:
     echo 'DB_PASSWORD=op://app-dev/db/password' > .env
-    op-offline run --env-file .env -- printenv DB_PASSWORD
+    op-fast run --env-file .env -- printenv DB_PASSWORD
 
   Use variables to switch environments:
     cat .env
     DB_PASSWORD=op://$APP_ENV/db/password
 
-    APP_ENV=prod op-offline run --env-file .env -- printenv DB_PASSWORD
+    APP_ENV=prod op-fast run --env-file .env -- printenv DB_PASSWORD
 
   Show secrets without masking:
-    DB_PASSWORD='op://app-prod/db/password' op-offline run --no-masking -- printenv DB_PASSWORD
+    DB_PASSWORD='op://app-prod/db/password' op-fast run --no-masking -- printenv DB_PASSWORD
 
   Run a subshell to expand variables:
-    MY_VAR='op://vault/item/field' op-offline run --no-masking -- sh -c 'echo \"$MY_VAR\"'
+    MY_VAR='op://vault/item/field' op-fast run --no-masking -- sh -c 'echo \"$MY_VAR\"'
 "
 )]
 pub struct RunArgs {

@@ -26,13 +26,13 @@ Learn more about secret references:
 https://developer.1password.com/docs/cli/secrets-reference-syntax/",
     after_help = "Examples:
   Read a password:
-    op-offline read op://app-prod/db/password
+    op-fast read op://app-prod/db/password
 
   Read with variable substitution:
-    VAULT=prod op-offline read 'op://$VAULT/db/password'
+    VAULT=prod op-fast read 'op://$VAULT/db/password'
 
   Save to a file with restricted permissions:
-    op-offline read -o ./key.pem op://app-prod/ssh/private-key
+    op-fast read -o ./key.pem op://app-prod/ssh/private-key
 "
 )]
 pub struct ReadArgs {

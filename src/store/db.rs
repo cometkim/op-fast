@@ -6,9 +6,9 @@ use heed::{Database, Env, EnvOpenOptions};
 use keyring_core::Entry as KeyringEntry;
 use serde::{Deserialize, Serialize};
 
-const DIR_NAME: &str = "op-offline";
+const DIR_NAME: &str = "op-fast";
 const DB_NAME: &str = "store.mdb";
-const SERVICE_NAME: &str = "op-offline";
+const SERVICE_NAME: &str = "op-fast";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Meta {

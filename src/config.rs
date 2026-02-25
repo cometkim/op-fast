@@ -94,7 +94,7 @@ impl Config {
             .or_else(|| dirs_sys::home_dir().map(|h| h.join(".config")))
             .context("Could not determine config directory")?;
 
-        Ok(config_dir.join("op-offline").join("config.toml"))
+        Ok(config_dir.join("op-fast").join("config.toml"))
     }
 }
 

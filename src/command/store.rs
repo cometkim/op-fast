@@ -5,20 +5,20 @@ use crate::store::Store;
 
 #[derive(Debug, Parser)]
 #[clap(
-    about = "Manage op-offline store",
-    long_about = "Manage op-offline store and OS keyring.
+    about = "Manage op-fast store",
+    long_about = "Manage op-fast store and OS keyring.
 
 Secrets are automatically cached when read from 1Password and expire
 based on the configured TTL (time-to-live).",
     after_help = "Examples:
   List all cached secrets:
-    op-offline store list
+    op-fast store list
 
   Clear a specific secret:
-    op-offline store clear 'op://vault/item/field'
+    op-fast store clear 'op://vault/item/field'
 
   Clear all cached secrets:
-    op-offline store clear
+    op-fast store clear
 "
 )]
 pub struct StoreCommand {

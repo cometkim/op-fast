@@ -1,7 +1,10 @@
 [package]
-name = "op-offline"
+name = "op-fast"
 version = "0.1.0"
 edition = "2024"
+homepage = "https://github.com/cometkim/op-fast"
+repository = "https://github.com/cometkim/op-fast.git"
+license = "MIT"
 
 [dependencies]
 anyhow = "1"
@@ -26,3 +29,8 @@ fancy-regex = "0.17"
 lazy_static = "1"
 humantime = "2"
 subst = "0.3"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
