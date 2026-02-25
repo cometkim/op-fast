@@ -19,7 +19,39 @@ impl Cache {
     pub fn open() -> anyhow::Result<Self> {
         let store = CacheStore::open()?;
         let config = Config::load()?;
-        Ok(Self { store, config })
+        let cache = Self { store, config };
+
+        // Run GC with 10% probability on open
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        if now.is_multiple_of(10)
+            && let Err(e) = cache.gc() {
+                log::warn!("Background GC failed: {}", e);
+            }
+
+        Ok(cache)
+    }
+
+    /// Garbage collect expired entries
+    pub fn gc(&self) -> anyhow::Result<usize> {
+        let entries = self.store.list()?;
+        let mut deleted = 0;
+
+        for (reference, entry) in &entries {
+            if entry.is_expired() {
+                self.store.delete(reference)?;
+                let _ = KeyringStore::delete(reference);
+                deleted += 1;
+            }
+        }
+
+        if deleted > 0 {
+            log::info!("GC removed {} expired entries", deleted);
+        }
+
+        Ok(deleted)
     }
 
     pub fn get(&self, reference: &str) -> anyhow::Result<Option<String>> {
