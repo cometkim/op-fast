@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
+use std::process::Stdio;
 
 use anyhow::Result;
 use clap::Parser;
@@ -7,8 +10,16 @@ use crate::delegate::OpDelegate;
 use crate::store::Store;
 use crate::template;
 
+const MASK: &str = "<concealed by 1Password>";
+
 #[derive(Debug, Parser)]
 pub struct RunArgs {
+    #[clap(long = "env-file", value_name = "FILE")]
+    pub env_files: Vec<PathBuf>,
+
+    #[clap(long = "no-masking")]
+    pub no_masking: bool,
+
     #[clap(trailing_var_arg = true, allow_hyphen_values = true)]
     pub command: Vec<String>,
 }
@@ -18,10 +29,38 @@ pub fn execute(args: RunArgs) -> Result<()> {
         anyhow::bail!("No command specified");
     }
 
+    let mut env_vars: HashMap<String, String> = HashMap::new();
+
+    for (key, value) in std::env::vars() {
+        env_vars.insert(key, value);
+    }
+
+    for env_file in &args.env_files {
+        if env_file.exists() {
+            let contents = std::fs::read_to_string(env_file)?;
+            for line in contents.lines() {
+                let line = line.trim();
+                if line.is_empty() || line.starts_with('#') {
+                    continue;
+                }
+                if let Some((key, value)) = line.split_once('=') {
+                    let key = key.trim();
+                    let value = value.trim();
+                    let value = value
+                        .strip_prefix('"')
+                        .and_then(|v| v.strip_suffix('"'))
+                        .or_else(|| value.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')))
+                        .unwrap_or(value);
+                    env_vars.insert(key.to_string(), value.to_string());
+                }
+            }
+        }
+    }
+
     let mut all_refs: Vec<String> = Vec::new();
 
-    for (_, value) in std::env::vars() {
-        all_refs.extend(template::extract_references(&value));
+    for value in env_vars.values() {
+        all_refs.extend(template::extract_references(value));
     }
 
     for arg in &args.command {
@@ -74,11 +113,11 @@ pub fn execute(args: RunArgs) -> Result<()> {
 
     let resolver = |ref_str: &str| stored_values.get(ref_str).cloned();
 
-    let mut env_vars: HashMap<String, String> = HashMap::new();
-    for (key, value) in std::env::vars() {
-        let resolved = template::resolve_variables(&value);
+    let mut resolved_env: HashMap<String, String> = HashMap::new();
+    for (key, value) in &env_vars {
+        let resolved = template::resolve_variables(value);
         let substituted = template::substitute_references(&resolved, resolver);
-        env_vars.insert(key, substituted);
+        resolved_env.insert(key.clone(), substituted);
     }
 
     let command_args: Vec<String> = args
@@ -90,17 +129,57 @@ pub fn execute(args: RunArgs) -> Result<()> {
         })
         .collect();
 
-    let (program, args) = command_args
+    let (program, cmd_args) = command_args
         .split_first()
         .ok_or_else(|| anyhow::anyhow!("Empty command"))?;
 
-    let mut cmd = std::process::Command::new(program);
-    cmd.args(args);
+    let secrets: Vec<String> = stored_values.into_values().collect();
 
-    for (key, value) in env_vars {
-        cmd.env(key, value);
+    if args.no_masking {
+        let status = std::process::Command::new(program)
+            .args(cmd_args)
+            .envs(&resolved_env)
+            .status()?;
+        std::process::exit(status.code().unwrap_or(1));
     }
 
-    let status = cmd.status()?;
+    let mut child = std::process::Command::new(program)
+        .args(cmd_args)
+        .envs(&resolved_env)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+
+    if let Some(stdout) = child.stdout.take() {
+        let secrets = secrets.clone();
+        std::thread::spawn(move || {
+            let reader = BufReader::new(stdout);
+            for line in reader.lines().map_while(Result::ok) {
+                println!("{}", mask_secrets(&line, &secrets));
+            }
+        });
+    }
+
+    if let Some(stderr) = child.stderr.take() {
+        std::thread::spawn(move || {
+            let reader = BufReader::new(stderr);
+            for line in reader.lines().map_while(Result::ok) {
+                eprintln!("{}", mask_secrets(&line, &secrets));
+            }
+        });
+    }
+
+    let status = child.wait()?;
     std::process::exit(status.code().unwrap_or(1));
+}
+
+fn mask_secrets(input: &str, secrets: &[String]) -> String {
+    let mut result = input.to_string();
+    for secret in secrets {
+        if secret.is_empty() {
+            continue;
+        }
+        result = result.replace(secret, MASK);
+    }
+    result
 }

@@ -1,25 +1,43 @@
-use std::io::{self, Read};
+use std::fs::File;
+use std::io::{self, Read, Write};
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, ValueHint};
 
 use crate::delegate::OpDelegate;
 use crate::store::Store;
 use crate::template;
 
+fn parse_file_mode(s: &str) -> Result<u32> {
+    u32::from_str_radix(s, 8).context("Invalid file mode (expected octal)")
+}
+
 #[derive(Debug, Parser)]
 pub struct InjectArgs {
     #[clap(value_hint = ValueHint::FilePath)]
     pub file: Option<PathBuf>,
+
+    #[clap(short = 'i', long = "in-file", value_name = "FILE", value_hint = ValueHint::FilePath)]
+    pub in_file: Option<PathBuf>,
+
+    #[clap(short = 'o', long = "out-file", value_name = "FILE", value_hint = ValueHint::FilePath)]
+    pub out_file: Option<PathBuf>,
+
+    #[clap(long = "file-mode", value_name = "filemode", value_parser = parse_file_mode)]
+    pub file_mode: Option<u32>,
 
     #[clap(short = 'f', long = "force")]
     pub force: bool,
 }
 
 pub fn execute(args: InjectArgs) -> Result<()> {
-    let input = match &args.file {
-        Some(path) => std::fs::read_to_string(path)?,
+    let input_path = args.in_file.as_ref().or(args.file.as_ref());
+
+    let input = match input_path {
+        Some(path) => std::fs::read_to_string(path)
+            .with_context(|| format!("Failed to read input file: {:?}", path))?,
         None => {
             let mut s = String::new();
             io::stdin().read_to_string(&mut s)?;
@@ -33,52 +51,64 @@ pub fn execute(args: InjectArgs) -> Result<()> {
         .into_iter()
         .collect();
 
-    if references.is_empty() {
-        print!("{}", resolved);
-        return Ok(());
-    }
+    let output = if references.is_empty() {
+        resolved
+    } else {
+        let store = Store::open();
+        let delegate = OpDelegate::new()?;
 
-    let store = Store::open();
-    let delegate = OpDelegate::new()?;
+        let mut stored_values = std::collections::HashMap::new();
+        let mut uncached_refs = Vec::new();
 
-    let mut stored_values = std::collections::HashMap::new();
-    let mut uncached_refs = Vec::new();
-
-    match &store {
-        Ok(store) => {
-            for ref_str in &references {
-                match store.get(ref_str)? {
-                    Some(value) => {
-                        stored_values.insert(ref_str.clone(), value);
-                    }
-                    None => {
-                        uncached_refs.push(ref_str.as_str());
+        match &store {
+            Ok(store) => {
+                for ref_str in &references {
+                    match store.get(ref_str)? {
+                        Some(value) => {
+                            stored_values.insert(ref_str.clone(), value);
+                        }
+                        None => {
+                            uncached_refs.push(ref_str.as_str());
+                        }
                     }
                 }
             }
-        }
-        Err(e) => {
-            log::error!("Store unavailable: {}", e);
-            uncached_refs = references.iter().map(|s| s.as_str()).collect();
-        }
-    }
-
-    if !uncached_refs.is_empty() {
-        log::debug!("Fetching {} uncached references", uncached_refs.len());
-        let fetched = delegate.read_batch(&uncached_refs)?;
-
-        if let Ok(store) = &store {
-            for (ref_str, value) in &fetched {
-                store.put(ref_str, value)?;
+            Err(e) => {
+                log::error!("Store unavailable: {}", e);
+                uncached_refs = references.iter().map(|s| s.as_str()).collect();
             }
         }
 
-        stored_values.extend(fetched);
+        if !uncached_refs.is_empty() {
+            log::debug!("Fetching {} uncached references", uncached_refs.len());
+            let fetched = delegate.read_batch(&uncached_refs)?;
+
+            if let Ok(store) = &store {
+                for (ref_str, value) in &fetched {
+                    store.put(ref_str, value)?;
+                }
+            }
+
+            stored_values.extend(fetched);
+        }
+
+        template::substitute_references(&resolved, |ref_str| stored_values.get(ref_str).cloned())
+    };
+
+    if let Some(out_file) = &args.out_file {
+        let mut file = File::create(out_file)
+            .with_context(|| format!("Failed to create output file: {:?}", out_file))?;
+
+        file.write_all(output.as_bytes())?;
+
+        if let Some(mode) = args.file_mode {
+            use std::fs;
+            fs::set_permissions(out_file, PermissionsExt::from_mode(mode))
+                .with_context(|| format!("Failed to set file mode: {:o}", mode))?;
+        }
+    } else {
+        print!("{}", output);
     }
 
-    let output =
-        template::substitute_references(&resolved, |ref_str| stored_values.get(ref_str).cloned());
-
-    print!("{}", output);
     Ok(())
 }
