@@ -1,6 +1,6 @@
 [package]
 name = "op-fast"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "1Password CLI proxy for instant access to secrets"
 homepage = "https://github.com/cometkim/op-fast"
