@@ -2,6 +2,20 @@
 
 `op-fast` is a proxy for the [1Password CLI], to make secret access much faster, like instantly ⚡
 
+```
+Benchmark 1: op read "op://Employee/Test Note/test"
+  Time (mean ± σ):      2.031 s ±  0.032 s    [User: 0.072 s, System: 0.052 s]
+  Range (min … max):    1.980 s …  2.062 s    5 runs
+
+Benchmark 2: op-fast read "op://Employee/Test Note/test"
+  Time (mean ± σ):      22.6 ms ±   1.7 ms    [User: 4.9 ms, System: 4.1 ms]
+  Range (min … max):    21.2 ms …  25.2 ms    5 runs
+
+Summary
+  op-fast read "op://Employee/Test Note/test" ran
+   90.00 ± 6.91 times faster than op read "op://Employee/Test Note/test"
+```
+
 It leverages OS keyrings to cache secrets that have already been fetched. To make it fast re-access without requiring re-authentication or network roundtrips.
 
 ## Features
