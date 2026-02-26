@@ -1,9 +1,9 @@
 use clap::Parser;
 
-mod store;
 mod command;
 mod config;
 mod delegate;
+mod store;
 mod template;
 
 #[derive(Debug, Parser)]
