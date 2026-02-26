@@ -28,10 +28,16 @@ It leverages OS keyrings to cache secrets that have already been fetched. To mak
 
 Check out the [releases page](https://github.com/cometkim/op-fast/releases) for pre-built binaries.
 
-You can install it with Homebrew:
+You can install it using Homebrew:
 
 ```bash
 brew install cometkim/tap/op-fast
+```
+
+Or from source:
+
+```bash
+cargo install op-fast
 ```
 
 ## Usage
