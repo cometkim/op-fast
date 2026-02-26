@@ -2,8 +2,8 @@ mod db;
 
 pub use db::{Db, Meta};
 
-use crate::config::Config;
 use std::collections::HashMap;
+use std::time::Duration;
 
 pub fn init() -> anyhow::Result<()> {
     let config = HashMap::new();
@@ -45,14 +45,12 @@ pub fn init() -> anyhow::Result<()> {
 
 pub struct Store {
     db: Db,
-    config: Config,
 }
 
 impl Store {
     pub fn open() -> anyhow::Result<Self> {
         let db = Db::open()?;
-        let config = Config::load()?;
-        let store = Self { db, config };
+        let store = Self { db };
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -80,8 +78,7 @@ impl Store {
         }
     }
 
-    pub fn put(&self, reference: &str, value: &str) -> anyhow::Result<()> {
-        let ttl = self.config.resolve_ttl(reference);
+    pub fn put(&self, reference: &str, value: &str, ttl: Duration) -> anyhow::Result<()> {
         self.db.put(reference, value, ttl)?;
         log::debug!("Stored {} with TTL {:?}", reference, ttl);
         Ok(())

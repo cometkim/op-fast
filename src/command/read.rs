@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::{Parser, ValueHint};
 
+use crate::config::Config;
 use crate::delegate::OpDelegate;
 use crate::store::Store;
 
@@ -69,6 +70,7 @@ pub struct ReadArgs {
 }
 
 pub fn execute(args: ReadArgs) -> Result<()> {
+    let config = Config::load()?;
     let store = Store::open();
     let delegate = OpDelegate::new()?;
 
@@ -77,7 +79,8 @@ pub fn execute(args: ReadArgs) -> Result<()> {
             Some(value) => value,
             None => {
                 let value = delegate.read(&args.reference)?;
-                store.put(&args.reference, &value)?;
+                let ttl = config.resolve_ttl(&args.reference);
+                store.put(&args.reference, &value, ttl)?;
                 value
             }
         },

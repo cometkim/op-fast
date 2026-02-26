@@ -6,6 +6,7 @@ use std::process::Stdio;
 use anyhow::Result;
 use clap::Parser;
 
+use crate::config::Config;
 use crate::delegate::OpDelegate;
 use crate::store::Store;
 use crate::template;
@@ -119,6 +120,7 @@ pub fn execute(args: RunArgs) -> Result<()> {
         .into_iter()
         .collect();
 
+    let config = Config::load()?;
     let store = Store::open();
     let delegate = OpDelegate::new()?;
 
@@ -150,7 +152,8 @@ pub fn execute(args: RunArgs) -> Result<()> {
 
         if let Ok(store) = &store {
             for (ref_str, value) in &fetched {
-                store.put(ref_str, value)?;
+                let ttl = config.resolve_ttl(ref_str);
+                store.put(ref_str, value, ttl)?;
             }
         }
 

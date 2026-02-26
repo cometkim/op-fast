@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::{Parser, ValueHint};
 
+use crate::config::Config;
 use crate::delegate::OpDelegate;
 use crate::store::Store;
 use crate::template;
@@ -104,6 +105,7 @@ pub fn execute(args: InjectArgs) -> Result<()> {
     let output = if references.is_empty() {
         resolved
     } else {
+        let config = Config::load()?;
         let store = Store::open();
         let delegate = OpDelegate::new()?;
 
@@ -135,7 +137,8 @@ pub fn execute(args: InjectArgs) -> Result<()> {
 
             if let Ok(store) = &store {
                 for (ref_str, value) in &fetched {
-                    store.put(ref_str, value)?;
+                    let ttl = config.resolve_ttl(ref_str);
+                    store.put(ref_str, value, ttl)?;
                 }
             }
 
