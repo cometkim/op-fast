@@ -13,7 +13,6 @@ clap = { version = "4.5", features = ["derive"] }
 env_logger = "0.11"
 log = "0.4"
 thiserror = "2"
-keyring = "4.0.0-rc.3"
 keyring-core = "0.7"
 which = "7"
 foldhash = "0.1"
@@ -30,6 +29,15 @@ fancy-regex = "0.17"
 lazy_static = "1"
 humantime = "2"
 subst = "0.3"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+linux-keyutils-keyring-store = "0.2.1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+apple-native-keyring-store = { version = "0.2.2", features = ["keychain", "protected"] }
+
+[target.'cfg(any(target_os = "freebsd", target_os = "openbsd"))'.dependencies]
+dbus-secret-service-keyring-store = { version = "0.3.3", features = ["crypto-rust", "vendored"] }
 
 # The profile that 'dist' will build with
 [profile.dist]
