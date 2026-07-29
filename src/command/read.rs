@@ -1,6 +1,3 @@
-use std::fs::File;
-use std::io::Write;
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -91,13 +88,7 @@ pub fn execute(args: ReadArgs) -> Result<()> {
     };
 
     if let Some(out_file) = &args.out_file {
-        let mut file = File::create(out_file)
-            .with_context(|| format!("Failed to create file: {:?}", out_file))?;
-        file.write_all(value.as_bytes())?;
-
-        use std::fs;
-        fs::set_permissions(out_file, PermissionsExt::from_mode(args.file_mode))
-            .with_context(|| format!("Failed to set file mode: {:o}", args.file_mode))?;
+        crate::output::write_secret_file(out_file, value.as_bytes(), args.file_mode)?;
     } else if args.no_newline {
         print!("{}", value);
     } else {

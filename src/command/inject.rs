@@ -1,6 +1,4 @@
-use std::fs::File;
-use std::io::{self, Read, Write};
-use std::os::unix::fs::PermissionsExt;
+use std::io::{self, Read};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -75,9 +73,10 @@ pub struct InjectArgs {
         long = "file-mode",
         value_name = "filemode",
         value_parser = parse_file_mode,
+        default_value = "600",
         help = "Set file mode for the output file (octal, ignored without --out-file)"
     )]
-    pub file_mode: Option<u32>,
+    pub file_mode: u32,
 
     #[clap(short = 'f', long = "force", help = "Do not prompt for confirmation")]
     pub force: bool,
@@ -149,16 +148,7 @@ pub fn execute(args: InjectArgs) -> Result<()> {
     };
 
     if let Some(out_file) = &args.out_file {
-        let mut file = File::create(out_file)
-            .with_context(|| format!("Failed to create output file: {:?}", out_file))?;
-
-        file.write_all(output.as_bytes())?;
-
-        if let Some(mode) = args.file_mode {
-            use std::fs;
-            fs::set_permissions(out_file, PermissionsExt::from_mode(mode))
-                .with_context(|| format!("Failed to set file mode: {:o}", mode))?;
-        }
+        crate::output::write_secret_file(out_file, output.as_bytes(), args.file_mode)?;
     } else {
         print!("{}", output);
     }
